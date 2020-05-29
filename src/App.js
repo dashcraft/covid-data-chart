@@ -39,9 +39,10 @@ function App() {
   // console.log('data', data, 'loading', loading)
 
   function reduceData(){
+    let pmnDeaths = reducePData(pdata)
     return data.reduce((arr, item) => {
       const exists = arr.findIndex(it => it.state == item.state)
-
+      const statePnOnly = pmnDeaths.find(pn => pn.state === item.state)
       if(item.state === 'United States'){
         return arr;
       }
@@ -51,9 +52,9 @@ function App() {
         arr[exists].total_deaths += parseInt(item.total_deaths)|| 0
         arr[exists].covid_deaths += parseInt(item.covid_deaths)|| 0
         arr[exists].pneumonia_and_covid_deaths += parseInt(item.pneumonia_and_covid_deaths)|| 0
-        arr[exists].difference = parseFloat(arr[exists].pneumonia_deaths / arr[exists].covid_deaths, 2) * 100
-        if(!isFinite(arr[exists].difference)){
-          arr[exists].difference = arr[exists].pneumonia_deaths
+        if(!!statePnOnly && statePnOnly['2017-18']){
+          console.log('state pn only', statePnOnly['2017-18'])
+          arr[exists].past_2018 = parseInt(statePnOnly['2017-18'] )
         }
       } else {
         let initItem = {
@@ -63,11 +64,13 @@ function App() {
           total_deaths: parseInt(item.total_deaths) || 0,
           covid_deaths: parseInt(item.covid_deaths) || 0,
           pneumonia_and_covid_deaths: parseInt(item.pneumonia_and_covid_deaths) || 0,
-          difference: parseFloat((parseInt(item.pneumonia_deaths)|| 0 / parseInt(item.covid_deaths) || 0), 2) * 100
         }
-        if(!isFinite(initItem.difference)){
-          initItem.difference = arr.pneumonia_deaths
+        if(!!statePnOnly && statePnOnly['2017-18']){
+          console.log('state pn only', statePnOnly['2017-18'])
+
+          initItem.past_2018 = parseInt(statePnOnly['2017-18'])
         }
+
         arr.push(initItem)
       }
       return arr;
@@ -85,7 +88,7 @@ function App() {
       } else {
         let newItem = {}
         newItem.state = item.state
-        newItem[item.season] = item.deaths_from_pneumonia_and_influenza
+        newItem[`${item.season}`] = item.deaths_from_pneumonia_and_influenza
         arr.push(newItem)
       }
       return arr;
@@ -105,11 +108,10 @@ function App() {
     )
   }
 
-  console.log('reduced data', pdata)
   return (
     <div className="App" style={{height: '100vh', width: '100vw', display: 'flex', flex: 1, flexDirection: 'row'}}>
       <div style={{ display: 'flex', flex: 1, flexDirection: 'column'}}>
-      <h2 style={{ textAlign: 'center' }}> pneumonia vs covid and difference </h2>
+      <h2 style={{ textAlign: 'center' }}> pneumonia vs covid and difference since January </h2>
       <ResponsiveContainer>
         <BarChart
           data={reduceData(data)}
@@ -121,12 +123,12 @@ function App() {
           <Legend />
           <Bar dataKey="covid_deaths" stackId="a" fill="#82ca9d" />
           <Bar dataKey="pneumonia_deaths" stackId="a" fill="#8884d8" />
-          <Bar dataKey="difference" stackId="a" fill="#841617" />        
+          <Bar dataKey="past_2018" stackId="a" fill="#841617" />        
         </BarChart>
     </ResponsiveContainer>
     </div>
     <div style={{ display: 'flex', flex: 1, flexDirection: 'column'}}>
-      <h2 style={{ textAlign: 'center' }}> Pneumonia prior years </h2>
+      <h2 style={{ textAlign: 'center' }}> Pneumonia prior years for FULL YEAR </h2>
     <table>
       <thead>
         <th>State</th>
@@ -142,9 +144,9 @@ function App() {
         }).map(dat => {
           return (<tr>
           <td>{dat.state}</td>
-          <td>{dat["2018-19"]}</td>
-          <td>{dat["2017-18"]}</td>
-          <td>{dat["2016-17"]}</td>
+          <td>{dat['2017-18']}</td>
+          <td>{dat['2016-17']}</td>
+          <td>{dat['2015-16']}</td>
         </tr>)
         })}
       </tbody>

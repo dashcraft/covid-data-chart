@@ -4,6 +4,8 @@ import './App.css';
 import { css } from "@emotion/core";
 
 import getCovidData from './services/covid-data'
+import getPData from './services/pneumonia-deaths'
+
 import {
   BarChart, Bar, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts';
@@ -18,15 +20,18 @@ const override = css`
 function App() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState([])
-
+  const [pdata, setPData] = useState([])
   useEffect(() => {
     fetchData()
   }, [])
 
   async function fetchData(){
     let data = await getCovidData()
+    let pdata = await getPData()
+
     setTimeout(async () => {
       await setData(data)
+      await setPData(pdata)
       await setLoading(false)
     }, 1500)
   }
@@ -36,6 +41,7 @@ function App() {
   function reduceData(){
     return data.reduce((arr, item) => {
       const exists = arr.findIndex(it => it.state == item.state)
+
       if(item.state === 'United States'){
         return arr;
       }
@@ -68,6 +74,24 @@ function App() {
     }, [])
   }
 
+  function reducePData(pdata){
+    return pdata.reduce((arr, item) => {
+      const exists = arr.findIndex(it => it.state == item.state)
+      if(!item.state){
+        return arr;
+      }
+      if(exists !== -1) {
+        arr[exists][item.season] = item.deaths_from_pneumonia_and_influenza
+      } else {
+        let newItem = {}
+        newItem.state = item.state
+        newItem[item.season] = item.deaths_from_pneumonia_and_influenza
+        arr.push(newItem)
+      }
+      return arr;
+    }, [])
+  }
+
   if(loading){
     return (
       <div className="sweet-loading">
@@ -81,23 +105,51 @@ function App() {
     )
   }
 
-  console.log('reduced data', reduceData(data))
+  console.log('reduced data', pdata)
   return (
-    <div className="App" style={{height: '100vh', width: '100vh'}}>
-    <ResponsiveContainer>
-      <BarChart
-        data={reduceData(data)}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="state" />
-        <YAxis domain={[0, 50000]}/>
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="covid_deaths" stackId="a" fill="#82ca9d" />
-        <Bar dataKey="pneumonia_deaths" stackId="a" fill="#8884d8" />
-        <Bar dataKey="difference" stackId="a" fill="#841617" />        
-      </BarChart>
+    <div className="App" style={{height: '100vh', width: '100vw', display: 'flex', flex: 1, flexDirection: 'row'}}>
+      <div style={{ display: 'flex', flex: 1, flexDirection: 'column'}}>
+      <h2 style={{ textAlign: 'center' }}> pneumonia vs covid and difference </h2>
+      <ResponsiveContainer>
+        <BarChart
+          data={reduceData(data)}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="state" />
+          <YAxis domain={[0, 50000]}/>
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="covid_deaths" stackId="a" fill="#82ca9d" />
+          <Bar dataKey="pneumonia_deaths" stackId="a" fill="#8884d8" />
+          <Bar dataKey="difference" stackId="a" fill="#841617" />        
+        </BarChart>
     </ResponsiveContainer>
+    </div>
+    <div style={{ display: 'flex', flex: 1, flexDirection: 'column'}}>
+      <h2 style={{ textAlign: 'center' }}> Pneumonia prior years </h2>
+    <table>
+      <thead>
+        <th>State</th>
+        <th>2018</th>
+        <th>2017</th>
+        <th>2016</th>
+      </thead>
+      <tbody>
+        {reducePData(pdata).sort((a,b) => {
+          if(a.state > b.state) return 1
+          if(a.state < b.state) return -1
+          return 0
+        }).map(dat => {
+          return (<tr>
+          <td>{dat.state}</td>
+          <td>{dat["2018-19"]}</td>
+          <td>{dat["2017-18"]}</td>
+          <td>{dat["2016-17"]}</td>
+        </tr>)
+        })}
+      </tbody>
+    </table>
+    </div>
     </div>
   );
 }
